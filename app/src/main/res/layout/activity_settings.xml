@@ -33,7 +33,7 @@
     <View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/colorPrimaryDark"/>
 
     <LinearLayout  style="@style/Nugu.Widget.Setting" >
-        <TextView android:text="@string/setting_wakup_word" android:layout_width="0dp" android:layout_height="wrap_content"
+        <TextView android:text="@string/setting_wakeup_word" android:layout_width="0dp" android:layout_height="wrap_content"
                   android:layout_weight="1"/>
         <Spinner
                 android:layout_width="0dp"
