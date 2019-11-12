@@ -54,10 +54,6 @@ class SettingsActivity : AppCompatActivity() {
         findViewById<Switch>(R.id.switch_enable_recognition_beep)
     }
 
-    private val buttonUsingNugu : LinearLayout by lazy {
-        findViewById<LinearLayout>(R.id.btn_using_nugu)
-    }
-
     private val buttonLogout : Button by lazy {
         findViewById<Button>(R.id.btn_logout)
     }
@@ -117,14 +113,6 @@ class SettingsActivity : AppCompatActivity() {
 
         switchEnableRecognitionBeep.setOnCheckedChangeListener { _, isChecked ->
             PreferenceHelper.enableRecognitionBeep(this, isChecked)
-        }
-
-        buttonUsingNugu.setOnClickListener {
-            NuguOAuth.getClient().logout()
-            ClientManager.getClient().shutdown()
-            PreferenceHelper.credentials(this@SettingsActivity,"")
-            finishAffinity()
-            LoadingActivity.invokeActivity(this@SettingsActivity)
         }
 
         buttonLogout.setOnClickListener {
