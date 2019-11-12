@@ -155,7 +155,9 @@ class LoadingActivity : AppCompatActivity(), ClientManager.Observer {
         return deviceUniqueId
     }
 
-    // Start main activity
+    /**
+     * Start main activity
+     **/
     private fun startMainActivity() {
         runOnUiThread {
             MainActivity.invokeActivity(this@LoadingActivity)
@@ -163,7 +165,12 @@ class LoadingActivity : AppCompatActivity(), ClientManager.Observer {
         }
     }
 
-    // Start intro activity
+    /**
+     * Start intro activity, If not, go to main activity.
+     * You must enter poc_id[YOUR_POC_ID_HERE].
+     * please check below
+     * @see [https://developers.nugu.co.kr/#/sdk/pocList]
+    **/
     private fun startIntroActivity() {
         runOnUiThread {
             IntroActivity.invokeActivity(this@LoadingActivity, "YOUR_POC_ID_HERE", getDeviceUniqueId())
