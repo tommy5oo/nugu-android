@@ -34,7 +34,7 @@ internal class GrpcCall(
     val listener: MessageSender.OnSendMessageListener
 ) :
     com.skt.nugu.sdk.core.interfaces.message.Call {
-    private val timeoutFutures = ConcurrentHashMap<Int, ScheduledFuture<*>>()
+    private val timeoutFutures = ConcurrentHashMap<String, ScheduledFuture<*>>()
     private var executed = false
     private var canceled = false
     private var callback: MessageSender.Callback? = null
@@ -45,10 +45,10 @@ internal class GrpcCall(
 
     override fun request() = request
 
-    private val hashCode : Int by lazy {
+    private val messageId : String by lazy {
         when(request) {
-            is EventMessageRequest -> request.hashCode()
-            else -> -1
+            is EventMessageRequest -> request.messageId
+            else -> ""
         }
     }
 
@@ -78,15 +78,16 @@ internal class GrpcCall(
     }
 
     private fun scheduleTimeout() {
-        if(hashCode != -1) {
-            timeoutFutures[hashCode] = timeoutScheduler.schedule({
+        if(!messageId.isNullOrEmpty()) {
+            timeoutFutures[messageId] = timeoutScheduler.schedule({
+                Logger.d(TAG, "$messageId is timeout")
                 result(Status.DEADLINE_EXCEEDED)
             }, callTimeoutMillis, TimeUnit.MILLISECONDS)
         }
     }
 
     private fun cancelScheduledTimeout() {
-        timeoutFutures.remove(hashCode)?.cancel(true)
+        timeoutFutures.remove(messageId)?.cancel(true)
     }
 
     override fun isCanceled() = synchronized(this) {
