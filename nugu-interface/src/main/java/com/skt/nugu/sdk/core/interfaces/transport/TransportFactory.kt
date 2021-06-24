@@ -33,7 +33,6 @@ interface TransportFactory {
         authDelegate: AuthDelegate,
         messageConsumer: MessageConsumer,
         transportObserver: TransportListener,
-        isStartReceiveServerInitiatedDirective: () -> Boolean,
-        connectSilently: Boolean
+        isStartReceiveServerInitiatedDirective: () -> Boolean
     ): Transport
 }

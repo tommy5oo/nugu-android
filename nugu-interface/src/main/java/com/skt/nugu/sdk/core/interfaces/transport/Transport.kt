@@ -45,19 +45,6 @@ interface Transport {
     fun isConnectedOrConnecting(): Boolean
 
     /**
-     * Returns whether this object is currently connectSilently mode.
-     */
-    fun isConnectSilently() : Boolean
-
-    /**
-     * Sets the connectSilently mode.
-     * It hides the CONNECTING state when in connectSilently mode,
-     * and is released when the CONNECTED state is reached.
-     * @param connectSilently true is connectSilently mode, otherwise false
-     */
-    fun setConnectSilently(connectSilently: Boolean)
-
-    /**
      * Send a message request.
      * @param call A newly send [Call]
      * @return true is success, otherwise false

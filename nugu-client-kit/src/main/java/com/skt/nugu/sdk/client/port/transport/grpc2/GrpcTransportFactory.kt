@@ -29,6 +29,7 @@ class GrpcTransportFactory(
     private val dnsLookup: DnsLookup? = null,
     private val callOptions: CallOptions? = null
 ) : TransportFactory {
+    
     /**
      * Create a Transport.
      */
@@ -36,8 +37,7 @@ class GrpcTransportFactory(
         authDelegate: AuthDelegate,
         messageConsumer: MessageConsumer,
         transportObserver: TransportListener,
-        isStartReceiveServerInitiatedDirective: () -> Boolean,
-        connectSilently: Boolean
+        isStartReceiveServerInitiatedDirective: () -> Boolean
     ): Transport {
         return GrpcTransport.create(
             serverInfo,
@@ -46,8 +46,7 @@ class GrpcTransportFactory(
             authDelegate,
             messageConsumer,
             transportObserver,
-            isStartReceiveServerInitiatedDirective,
-            connectSilently
+            isStartReceiveServerInitiatedDirective
         )
     }
 }

@@ -93,9 +93,8 @@ class MessageRouter(
 
     /**
      * create a new transport
-     * @param connectSilently Do not propagate the CONNECTING state during the connection process
      */
-    private fun createActiveTransport(connectSilently: Boolean) {
+    private fun createActiveTransport() {
         lock.withLock {
             // Shutdown a previous activeTransport
             if (activeTransport != null) {
@@ -106,8 +105,7 @@ class MessageRouter(
                 authDelegate = authDelegate,
                 messageConsumer = this,
                 transportObserver = this,
-                isStartReceiveServerInitiatedDirective = isStartReceiveServerInitiatedDirective,
-                connectSilently = connectSilently
+                isStartReceiveServerInitiatedDirective = isStartReceiveServerInitiatedDirective
             ).apply {
                 activeTransport = this
             }
@@ -130,6 +128,7 @@ class MessageRouter(
     override fun setObserver(observer: MessageRouterObserverInterface) {
         this.observer = observer
     }
+
     /**
      * Prepares the [MessageRequest] to be executed at some point in the future.
      */
@@ -141,7 +140,7 @@ class MessageRouter(
                 ).withDescription("NetworkManager is disabled"), request, this)
         }
         if(activeTransport.isNotInitialized()) {
-            createActiveTransport(connectSilently = true)
+            createActiveTransport()
         }
         return activeTransport?.newCall(activeTransport, request, headers, this) ?: FixedStateCall(
             Status(
@@ -196,7 +195,6 @@ class MessageRouter(
      */
     override fun onConnected(transport: Transport) {
         Logger.d(TAG, "[onConnected] $transport")
-        transport.setConnectSilently(false)
 
         // Switch from handoffTransport to activeTransport.
         lock.withLock {
@@ -247,10 +245,6 @@ class MessageRouter(
         transport: Transport,
         reason: ConnectionStatusListener.ChangedReason
     ) {
-        if(transport.isConnectSilently()) {
-            Logger.d(TAG, "[onConnecting] ConnectSilently mode is running..")
-            return
-        }
         setConnectionStatus(
             ConnectionStatusListener.Status.CONNECTING,
             reason
@@ -287,8 +281,7 @@ class MessageRouter(
                 authDelegate = authDelegate,
                 messageConsumer = this,
                 transportObserver = this,
-                isStartReceiveServerInitiatedDirective = isStartReceiveServerInitiatedDirective,
-                connectSilently = false
+                isStartReceiveServerInitiatedDirective = isStartReceiveServerInitiatedDirective
             ).apply {
                 handoffTransport = this
             }
@@ -305,7 +298,7 @@ class MessageRouter(
 
     override fun resetConnection(description: String?) {
         Logger.d(TAG, "[resetConnection] description=$description")
-        createActiveTransport(connectSilently = false)
+        createActiveTransport()
     }
 
     /**
@@ -341,7 +334,6 @@ class MessageRouter(
             return false
         }
         if(sidController.isStarted()) {
-            activeTransport?.setConnectSilently(true)
             sidController.stop(activeTransport)
         }
         sidController.setOnCompletionListener(onCompletion)
@@ -350,7 +342,7 @@ class MessageRouter(
                 ConnectionStatusListener.Status.CONNECTING,
                 ConnectionStatusListener.ChangedReason.CLIENT_REQUEST
             )
-            createActiveTransport(connectSilently = false)
+            createActiveTransport()
         }
         return true
     }

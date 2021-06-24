@@ -43,8 +43,7 @@ internal class GrpcTransport private constructor(
     private val authDelegate: AuthDelegate,
     private val messageConsumer: MessageConsumer,
     private var transportObserver: TransportListener?,
-    private val isStartReceiveServerInitiatedDirective: () -> Boolean,
-    private var connectSilently: Boolean
+    private val isStartReceiveServerInitiatedDirective: () -> Boolean
 ) : Transport {
     /**
      * Transport Constructor.
@@ -59,8 +58,7 @@ internal class GrpcTransport private constructor(
             authDelegate: AuthDelegate,
             messageConsumer: MessageConsumer,
             transportObserver: TransportListener,
-            isStartReceiveServerInitiatedDirective: () -> Boolean,
-            connectSilently: Boolean
+            isStartReceiveServerInitiatedDirective: () -> Boolean
         ): Transport {
             return GrpcTransport(
                 serverInfo,
@@ -69,8 +67,7 @@ internal class GrpcTransport private constructor(
                 authDelegate,
                 messageConsumer,
                 transportObserver,
-                isStartReceiveServerInitiatedDirective,
-                connectSilently
+                isStartReceiveServerInitiatedDirective
             )
         }
     }
@@ -80,10 +77,6 @@ internal class GrpcTransport private constructor(
     private var registryClient = RegistryClient(dnsLookup)
     private val executor = Executors.newSingleThreadExecutor()
     private var isHandOff = AtomicBoolean(false)
-    override fun isConnectSilently() = connectSilently
-    override fun setConnectSilently(connectSilently: Boolean) {
-        this.connectSilently = connectSilently
-    }
 
     private fun getDelegatedServerInfo() : NuguServerInfo {
         val info = serverInfo.delegate()?.serverInfo ?: serverInfo
