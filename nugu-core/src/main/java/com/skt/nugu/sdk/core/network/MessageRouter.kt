@@ -28,6 +28,7 @@ import kotlin.concurrent.withLock
 import com.skt.nugu.sdk.core.interfaces.message.Call
 import com.skt.nugu.sdk.core.interfaces.message.Status.Companion.withDescription
 import com.skt.nugu.sdk.core.interfaces.transport.FixedStateCall
+import java.util.concurrent.Executors
 
 /**
  * This class which specifies the interface to manage an connection over DeviceGateway.
@@ -44,9 +45,6 @@ class MessageRouter(
     /** The current active transport */
     private var activeTransport: Transport? = null
 
-    /** The handoff transport */
-    private var handoffTransport: Transport? = null
-
     /** The observer object.*/
     private var observer: MessageRouterObserverInterface? = null
 
@@ -54,6 +52,8 @@ class MessageRouter(
      * The listener for MessageSender
      */
     private val messageSenderListeners = CopyOnWriteArraySet<MessageSender.OnSendMessageListener>()
+
+    private val executor = Executors.newSingleThreadExecutor()
 
     /** The current connection status. */
     private var status: ConnectionStatusListener.Status =
@@ -86,22 +86,16 @@ class MessageRouter(
      * @return true is successful disconnect call, otherwise false
      */
     private fun disconnectAllTransport(): Boolean {
-        return lock.withLock {
-            if (activeTransport == null && handoffTransport == null) {
-                false
-            } else {
-                activeTransport?.disconnect()
-                handoffTransport?.disconnect()
-                true
-            }
+        lock.withLock {
+            activeTransport?.disconnect() ?: return false
         }
+        return true
     }
 
     /**
      * create a new transport
      */
-    private fun createActiveTransport() {
-        lock.withLock {
+    private fun createActiveTransport() = lock.withLock {
             // Shutdown a previous activeTransport
             if (activeTransport != null) {
                 activeTransport?.shutdown()
@@ -111,12 +105,12 @@ class MessageRouter(
                 authDelegate = authDelegate,
                 messageConsumer = this,
                 transportObserver = this,
-                isStartReceiveServerInitiatedDirective = isStartReceiveServerInitiatedDirective
+                isStartReceiveServerInitiatedDirective = isStartReceiveServerInitiatedDirective,
+                executor = executor
             ).apply {
                 activeTransport = this
             }
-        }.connect()
-    }
+        }
 
     /**
      * Close the DeviceGateway connection.
@@ -151,7 +145,7 @@ class MessageRouter(
                 ).withDescription("NetworkManager is disabled"), request, this)
         }
         if(activeTransport.isNotInitialized()) {
-            createActiveTransport()
+            createActiveTransport().connect()
         }
         return activeTransport?.newCall(activeTransport, request, headers, this) ?: FixedStateCall(
             Status(
@@ -207,14 +201,6 @@ class MessageRouter(
     override fun onConnected(transport: Transport) {
         Logger.d(TAG, "[onConnected] $transport")
 
-        // Switch from handoffTransport to activeTransport.
-        lock.withLock {
-            if (handoffTransport == transport) {
-                activeTransport?.shutdown()
-                activeTransport = handoffTransport
-                handoffTransport = null
-            }
-        }
         setConnectionStatus(
             ConnectionStatusListener.Status.CONNECTED,
             ConnectionStatusListener.ChangedReason.SUCCESS
@@ -236,13 +222,8 @@ class MessageRouter(
             if (transport == activeTransport) {
                 activeTransport?.shutdown()
                 activeTransport = null
-            } else if (transport == handoffTransport) {
-                // handoff fails
-                handoffTransport?.shutdown()
-                handoffTransport = null
-                activeTransport?.shutdown()
-                activeTransport = null
             }
+            sidController.stop(activeTransport)
         }
         setConnectionStatus(ConnectionStatusListener.Status.DISCONNECTED, reason)
     }
@@ -282,21 +263,8 @@ class MessageRouter(
         connectionTimeout: Int,
         charge: String
     ) {
-        lock.withLock {
-            // Canceling a previous handoff in progress
-            if (handoffTransport != null) {
-                handoffTransport?.shutdown()
-                handoffTransport = null
-            }
-            transportFactory.createTransport(
-                authDelegate = authDelegate,
-                messageConsumer = this,
-                transportObserver = this,
-                isStartReceiveServerInitiatedDirective = isStartReceiveServerInitiatedDirective
-            ).apply {
-                handoffTransport = this
-            }
-        }.handoffConnection(
+        Logger.d(TAG, "[handoffConnection]")
+        createActiveTransport().handoffConnection(
             protocol,
             hostname,
             address,
@@ -309,7 +277,7 @@ class MessageRouter(
 
     override fun resetConnection(description: String?) {
         Logger.d(TAG, "[resetConnection] description=$description")
-        createActiveTransport()
+        createActiveTransport().connect()
     }
 
     /**
@@ -318,7 +286,6 @@ class MessageRouter(
     override fun toString(): String {
         val builder = StringBuilder("MessageRouter : ")
             .append("activeTransport: ").append(activeTransport)
-            .append(", handoffTransport: ").append(handoffTransport)
             .append(", observer: ").append(observer)
             .append(", messageSenderListeners: ").append(messageSenderListeners.size)
             .append(", status: ").append(status)
@@ -353,7 +320,7 @@ class MessageRouter(
                 ConnectionStatusListener.Status.CONNECTING,
                 ConnectionStatusListener.ChangedReason.CLIENT_REQUEST
             )
-            createActiveTransport()
+            createActiveTransport().connect()
         }
         return true
     }

@@ -43,4 +43,16 @@ object DirectivePreconditions {
         }
         return false
     }
+
+    fun DirectiveMessage.checkIfDirectiveIsHandoffConnection(): Boolean {
+        val namespace = "System"
+        val name = "HandoffConnection"
+
+        this.directivesOrBuilderList.forEach {
+            if (it.header.namespace == namespace && it.header.name == name) {
+                return true
+            }
+        }
+        return false
+    }
 }

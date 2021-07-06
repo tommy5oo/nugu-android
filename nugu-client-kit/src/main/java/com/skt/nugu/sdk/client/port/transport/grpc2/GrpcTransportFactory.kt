@@ -18,6 +18,7 @@ package com.skt.nugu.sdk.client.port.transport.grpc2
 import com.skt.nugu.sdk.core.interfaces.auth.AuthDelegate
 import com.skt.nugu.sdk.core.interfaces.message.MessageConsumer
 import com.skt.nugu.sdk.core.interfaces.transport.*
+import java.util.concurrent.ExecutorService
 
 /**
  * TransportFactory to create [GrpcTransport].
@@ -37,7 +38,8 @@ class GrpcTransportFactory(
         authDelegate: AuthDelegate,
         messageConsumer: MessageConsumer,
         transportObserver: TransportListener,
-        isStartReceiveServerInitiatedDirective: () -> Boolean
+        isStartReceiveServerInitiatedDirective: () -> Boolean,
+        executor: ExecutorService
     ): Transport {
         return GrpcTransport.create(
             serverInfo,
@@ -46,7 +48,8 @@ class GrpcTransportFactory(
             authDelegate,
             messageConsumer,
             transportObserver,
-            isStartReceiveServerInitiatedDirective
+            isStartReceiveServerInitiatedDirective,
+            executor
         )
     }
 }

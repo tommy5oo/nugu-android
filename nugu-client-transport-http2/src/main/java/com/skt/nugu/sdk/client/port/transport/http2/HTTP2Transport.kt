@@ -29,6 +29,7 @@ import com.skt.nugu.sdk.client.port.transport.http2.devicegateway.DeviceGatewayT
 import com.skt.nugu.sdk.core.interfaces.message.Call
 import com.skt.nugu.sdk.core.interfaces.message.MessageSender
 import com.skt.nugu.sdk.core.interfaces.transport.DnsLookup
+import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -41,7 +42,8 @@ internal class HTTP2Transport(
     private val authDelegate: AuthDelegate,
     private val messageConsumer: MessageConsumer,
     private var transportObserver: TransportListener?,
-    private val isStartReceiveServerInitiatedDirective: () -> Boolean
+    private val isStartReceiveServerInitiatedDirective: () -> Boolean,
+    private val executor: ExecutorService
 ) : Transport {
     /**
      * Transport Constructor.
@@ -55,7 +57,8 @@ internal class HTTP2Transport(
             authDelegate: AuthDelegate,
             messageConsumer: MessageConsumer,
             transportObserver: TransportListener,
-            isStartReceiveServerInitiatedDirective: () -> Boolean
+            isStartReceiveServerInitiatedDirective: () -> Boolean,
+            executor: ExecutorService
         ): Transport {
             return HTTP2Transport(
                 serverInfo,
@@ -63,7 +66,8 @@ internal class HTTP2Transport(
                 authDelegate,
                 messageConsumer,
                 transportObserver,
-                isStartReceiveServerInitiatedDirective
+                isStartReceiveServerInitiatedDirective,
+                executor
             )
         }
     }
@@ -72,7 +76,7 @@ internal class HTTP2Transport(
     private var deviceGatewayClient: DeviceGatewayTransport? = null
     private var isHandOff = AtomicBoolean(false)
     private var registryClient = RegistryClient(dnsLookup)
-    private val executor = Executors.newSingleThreadExecutor()
+    //private val executor = Executors.newSingleThreadExecutor()
     private val scheduler = Executors.newSingleThreadScheduledExecutor()
 
     private fun getDelegatedServerInfo() : NuguServerInfo {

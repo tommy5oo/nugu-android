@@ -17,6 +17,7 @@ package com.skt.nugu.sdk.core.interfaces.transport
 
 import com.skt.nugu.sdk.core.interfaces.auth.AuthDelegate
 import com.skt.nugu.sdk.core.interfaces.message.MessageConsumer
+import java.util.concurrent.ExecutorService
 
 /**
  * This is the interface for the transport factory
@@ -33,6 +34,7 @@ interface TransportFactory {
         authDelegate: AuthDelegate,
         messageConsumer: MessageConsumer,
         transportObserver: TransportListener,
-        isStartReceiveServerInitiatedDirective: () -> Boolean
+        isStartReceiveServerInitiatedDirective: () -> Boolean,
+        executor: ExecutorService
     ): Transport
 }

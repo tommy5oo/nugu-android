@@ -30,7 +30,7 @@ import com.skt.nugu.sdk.core.interfaces.message.Call
 import com.skt.nugu.sdk.core.interfaces.message.MessageSender
 import com.skt.nugu.sdk.core.interfaces.transport.CallOptions
 import com.skt.nugu.sdk.core.interfaces.transport.DnsLookup
-import java.util.concurrent.Executors
+import java.util.concurrent.ExecutorService
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
@@ -43,7 +43,8 @@ internal class GrpcTransport private constructor(
     private val authDelegate: AuthDelegate,
     private val messageConsumer: MessageConsumer,
     private var transportObserver: TransportListener?,
-    private val isStartReceiveServerInitiatedDirective: () -> Boolean
+    private val isStartReceiveServerInitiatedDirective: () -> Boolean,
+    private val executor: ExecutorService
 ) : Transport {
     /**
      * Transport Constructor.
@@ -58,7 +59,8 @@ internal class GrpcTransport private constructor(
             authDelegate: AuthDelegate,
             messageConsumer: MessageConsumer,
             transportObserver: TransportListener,
-            isStartReceiveServerInitiatedDirective: () -> Boolean
+            isStartReceiveServerInitiatedDirective: () -> Boolean,
+            executor: ExecutorService
         ): Transport {
             return GrpcTransport(
                 serverInfo,
@@ -67,7 +69,8 @@ internal class GrpcTransport private constructor(
                 authDelegate,
                 messageConsumer,
                 transportObserver,
-                isStartReceiveServerInitiatedDirective
+                isStartReceiveServerInitiatedDirective,
+                executor
             )
         }
     }
@@ -75,7 +78,6 @@ internal class GrpcTransport private constructor(
     private var state: TransportState = TransportState()
     private var deviceGatewayClient: DeviceGatewayTransport? = null
     private var registryClient = RegistryClient(dnsLookup)
-    private val executor = Executors.newSingleThreadExecutor()
     private var isHandOff = AtomicBoolean(false)
 
     private fun getDelegatedServerInfo() : NuguServerInfo {

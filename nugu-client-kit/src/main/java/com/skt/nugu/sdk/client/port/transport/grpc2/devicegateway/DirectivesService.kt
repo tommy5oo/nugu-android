@@ -15,6 +15,7 @@
  */
 package com.skt.nugu.sdk.client.port.transport.grpc2.devicegateway
 
+import com.skt.nugu.sdk.client.port.transport.grpc2.utils.DirectivePreconditions.checkIfDirectiveIsHandoffConnection
 import com.skt.nugu.sdk.client.port.transport.grpc2.utils.DirectivePreconditions.checkIfDirectiveIsUnauthorizedRequestException
 import com.skt.nugu.sdk.core.utils.Logger
 import devicegateway.grpc.DirectivesRequest
@@ -49,6 +50,7 @@ internal class DirectivesService(
     private var deadlineCancellationFuture : ScheduledFuture<*>? = null
 
     private val isStarted = AtomicBoolean(false)
+    private val isHandOff = AtomicBoolean(false)
 
     private fun cancelDeadlineTimer() {
         if(deadlineCancellationFuture?.isCancelled == false) {
@@ -88,6 +90,9 @@ internal class DirectivesService(
                                     if (it.checkIfDirectiveIsUnauthorizedRequestException()) {
                                         observer.onError(Status.UNAUTHENTICATED, name)
                                     }
+                                    if (it.checkIfDirectiveIsHandoffConnection()) {
+                                        isHandOff.set(true)
+                                    }
                                 }
                             }
                             Downstream.MessageCase.ATTACHMENT_MESSAGE -> {
@@ -114,10 +119,11 @@ internal class DirectivesService(
                     }
 
                     override fun onCompleted() {
-                        if (!isShutdown.get()) {
+                        Logger.d(TAG, "[onCompleted] Stream is completed, handoff=${isHandOff.get()}, shutdown=${isShutdown.get()}")
+
+                        if (!isShutdown.get() && !isHandOff.get()) {
                             isStarted.set(false)
                             cancelDeadlineTimer()
-                            Logger.d(TAG, "[onCompleted] Stream is completed")
                             observer.onError(Status.UNKNOWN, name)
                         }
                     }

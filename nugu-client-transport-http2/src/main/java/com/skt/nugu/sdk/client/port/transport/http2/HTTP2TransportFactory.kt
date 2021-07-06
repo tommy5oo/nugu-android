@@ -21,6 +21,7 @@ import com.skt.nugu.sdk.core.interfaces.transport.TransportFactory
 import com.skt.nugu.sdk.core.interfaces.transport.TransportListener
 import com.skt.nugu.sdk.core.interfaces.transport.Transport
 import com.skt.nugu.sdk.core.interfaces.transport.DnsLookup
+import java.util.concurrent.ExecutorService
 
 /**
  * HTTP2TransportFactory to create [HTTP2Transport].
@@ -35,7 +36,8 @@ class HTTP2TransportFactory(
         authDelegate: AuthDelegate,
         messageConsumer: MessageConsumer,
         transportObserver: TransportListener,
-        isStartReceiveServerInitiatedDirective: () -> Boolean
+        isStartReceiveServerInitiatedDirective: () -> Boolean,
+        executor: ExecutorService
     ): Transport {
         return HTTP2Transport.create(
             serverInfo,
@@ -43,7 +45,8 @@ class HTTP2TransportFactory(
             authDelegate,
             messageConsumer,
             transportObserver,
-            isStartReceiveServerInitiatedDirective
+            isStartReceiveServerInitiatedDirective,
+            executor
         )
     }
 }
