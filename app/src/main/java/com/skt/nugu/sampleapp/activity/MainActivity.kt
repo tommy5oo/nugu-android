@@ -275,15 +275,12 @@ class MainActivity : AppCompatActivity(), SpeechRecognizerAggregatorInterface.On
         Log.d(TAG, "[onResume]")
         ClientManager.keywordResourceUpdateIfNeeded(this)
         speechRecognizerAggregator.addListener(this)
+        // update view
+        updateNuguButton()
 
         startOnPermissionGranted {
             tryStartListeningWithTrigger()
         }
-
-        // connect to server
-        ClientManager.getClient().connect()
-        // update view
-        updateNuguButton()
 
         handleExtras(intent.extras)
     }
@@ -322,7 +319,9 @@ class MainActivity : AppCompatActivity(), SpeechRecognizerAggregatorInterface.On
         // remove listener for systemagent
         ClientManager.getClient().removeSystemAgentListener(this)
         // shutdown a server
-//        ClientManager.getClient().shutdown()
+        // ClientManager.getClient().disconnect()
+        // If you want to keep the network in the background, check out the article below
+        // See https://developers-doc.nugu.co.kr/nugu-sdk/platform/android/background
 
         tokenRefresher.stop()
 
@@ -458,7 +457,9 @@ class MainActivity : AppCompatActivity(), SpeechRecognizerAggregatorInterface.On
                 return@runOnUiThread
             }
 
-            btnStartListening.isEnabled = isConnected()
+            // NUGU UX policy is not to disable
+            // See [https://developers-doc.nugu.co.kr/nugu-sdk/sdk-design-guide/voice-chrome#nugu-voice-button]
+            // btnStartListening.isEnabled = isConnected()
 
             when (btnStartListening.isFab()) {
                 true -> {
@@ -479,6 +480,7 @@ class MainActivity : AppCompatActivity(), SpeechRecognizerAggregatorInterface.On
     }
 
     override fun onConnectionStatusChanged(status: ConnectionStatusListener.Status, reason: ConnectionStatusListener.ChangedReason) {
+        Log.d(TAG, "[onConnectionStatusChanged] status=$status, reason=$reason")
         if (connectionStatus != status) {
             connectionStatus = status
             updateNuguButton()
@@ -525,15 +527,16 @@ class MainActivity : AppCompatActivity(), SpeechRecognizerAggregatorInterface.On
                 ConnectionStatusListener.ChangedReason.SERVER_SIDE_DISCONNECT
                 -> {
                     /**
-                     * only server-initiative-directive
+                     * Only server-initiated-directive
                      * If you want to reconnect to the server, run the code below.
                      * But it can be recursive, so you need to manage the count of attempts.
                      **/
                     if (NuguOAuth.getClient().isSidSupported()) {
                         ExponentialBackOff.awaitConnectedAndRetry(this, object : ExponentialBackOff.Callback {
                             override fun onRetry() {
-                                ClientManager.getClient().disconnect()
-                                ClientManager.getClient().connect()
+                                ClientManager.getClient().networkManager.startReceiveServerInitiatedDirective {
+                                    Log.d(TAG, "The reconnection with the server is complete")
+                                }
                             }
 
                             override fun onError(reason: ExponentialBackOff.ErrorCode) {
@@ -622,8 +625,6 @@ class MainActivity : AppCompatActivity(), SpeechRecognizerAggregatorInterface.On
 
     override fun onCredentialsChanged(credentials: Credentials) {
         PreferenceHelper.credentials(this, credentials.toString())
-        ClientManager.getClient().disconnect()
-        ClientManager.getClient().connect()
     }
 
     /** See more details in [LoginActivity.handleOAuthError] **/
@@ -646,7 +647,7 @@ class MainActivity : AppCompatActivity(), SpeechRecognizerAggregatorInterface.On
     }
 
     private fun handleRevoke() {
-        ClientManager.getClient().disconnect()
+        ClientManager.getClient().networkManager.shutdown()
         NuguOAuth.getClient().clearAuthorization()
         PreferenceHelper.credentials(this@MainActivity, "")
         LoginActivity.invokeActivity(this)

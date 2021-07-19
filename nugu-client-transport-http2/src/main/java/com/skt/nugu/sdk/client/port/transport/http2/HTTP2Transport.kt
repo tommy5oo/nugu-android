@@ -29,7 +29,9 @@ import com.skt.nugu.sdk.client.port.transport.http2.devicegateway.DeviceGatewayT
 import com.skt.nugu.sdk.core.interfaces.message.Call
 import com.skt.nugu.sdk.core.interfaces.message.MessageSender
 import com.skt.nugu.sdk.core.interfaces.transport.DnsLookup
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
@@ -48,6 +50,7 @@ internal class HTTP2Transport(
      */
     companion object {
         private const val TAG = "Transport"
+        private const val WAIT_FOR_POLICY_TIMEOUT_MS = 5000L // 5 s
 
         fun create(
             serverInfo: NuguServerInfo,
@@ -121,6 +124,7 @@ internal class HTTP2Transport(
         setState(DetailedState.CONNECTING_REGISTRY)
 
         executor.submit {
+            val policyLatch =  CountDownLatch(1)
             registryClient.getPolicy(getDelegatedServerInfo(), authDelegate, object :
                 RegistryClient.Observer {
                 override fun onCompleted(policy: Policy?) {
@@ -128,6 +132,8 @@ internal class HTTP2Transport(
                     policy?.let {
                         tryConnectToDeviceGateway(it)
                     } ?: setState(DetailedState.FAILED, ChangedReason.UNRECOVERABLE_ERROR)
+
+                    policyLatch.countDown()
                 }
 
                 override fun onError(reason: ChangedReason) {
@@ -139,8 +145,18 @@ internal class HTTP2Transport(
                             setState(DetailedState.FAILED, reason)
                         }
                     }
+
+                    policyLatch.countDown()
                 }
             }, isStartReceiveServerInitiatedDirective)
+
+            try {
+                if (!policyLatch.await(WAIT_FOR_POLICY_TIMEOUT_MS, TimeUnit.MILLISECONDS)) {
+                    Logger.w(TAG, "Timed out while attempting to perform getPolicy")
+                }
+            } catch ( e: InterruptedException) {
+                Logger.w(TAG, "Interrupted while waiting for getPolicy")
+            }
         }
         return true
     }
